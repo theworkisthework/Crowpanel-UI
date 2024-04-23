@@ -105,7 +105,7 @@ def write_command(command):
     uart1.write(command)
 
 def run_file(file):
-    write_command(f"$SD/Run=/{file}")
+    write_command(f"$SD/Run=/{file}\r\n")
 
 def play():
     write_command("~")
@@ -132,6 +132,8 @@ def list_files():
                 # button_text = button_id.get_text()
                 button_text = lv.btnmatrix.get_btn_text(button_target, button_id)
                 print(f"dialog event target {button_text}")
+                if button_text == "Run":
+                    run_file(clicked_btn["name"])
             
             # If this is a directory, get new file list but also display a link back (dir up icon ..)
 
