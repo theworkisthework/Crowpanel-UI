@@ -123,6 +123,15 @@ def list_files():
             # Access the item data stored in the button's user data
             clicked_btn = event.get_target()
             print(f"clicked_btn: {clicked_btn}")
+
+            def handle_dialog_button_click(dialog_event):
+                print(f"Dialog button pressed with event {dialog_event}")
+                # if (dialog_event == lv.EVENT.VALUE_CHANGED):
+                button_target = dialog_event.get_target()
+                button_id = button_target.get_selected_btn()
+                # button_text = button_id.get_text()
+                button_text = lv.btnmatrix.get_btn_text(button_target, button_id)
+                print(f"dialog event target {button_text}")
             
             # If this is a directory, get new file list but also display a link back (dir up icon ..)
 
@@ -132,6 +141,7 @@ def list_files():
                 print("File clicked - display dialog to run or cancel job")
                 job_dialog = lv.msgbox(None, "Job", clicked_btn["name"], ["Run", "Delete"], True)
                 job_dialog.align(lv.ALIGN.CENTER,0,0)
+                job_dialog.add_event_cb(handle_dialog_button_click, lv.EVENT.CLICKED, None)
                 
             else:
                 print("Directory entry clicked - relist files for selected directory")
