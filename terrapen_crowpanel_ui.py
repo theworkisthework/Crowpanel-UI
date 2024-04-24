@@ -107,6 +107,9 @@ def write_command(command):
 def run_file(file):
     write_command(f"$SD/Run=/{file}\r\n")
 
+def delete_file(file):
+    write_command(f"$SD/Delete=/{file}\r\n")
+
 def play():
     write_command("~")
 
@@ -128,17 +131,20 @@ def list_files():
                 print(f"Dialog button pressed with event {dialog_event}")
                 # if (dialog_event == lv.EVENT.VALUE_CHANGED):
                 button_target = dialog_event.get_target()
-                button_id = button_target.get_selected_btn()
-                # button_text = button_id.get_text()
-                button_text = lv.btnmatrix.get_btn_text(button_target, button_id)
-                print(f"dialog event target {button_text}")
-                if button_text == "Run":
-                    run_file(clicked_btn["name"])
+                print(f"button_target: {button_target}")
+                if button_target is lv.btnmatrix:
+                    button_id = button_target.get_selected_btn()
+                    button_text = lv.btnmatrix.get_btn_text(button_target, button_id)
+                    print(f"dialog event target {button_text}")
+                    if button_text == "Run":
+                        run_file(clicked_btn["name"])
+                    elif button_text == "Delete":
+                        delete_file(clicked_btn["name"])
             
             # If this is a directory, get new file list but also display a link back (dir up icon ..)
 
             # If this is a file, display a dialog to execute the gcode, maybe delete as well?
-            if clicked_btn["size"]:
+            if int(clicked_btn["size"]) > 0:
                 # Open dialog to run or cancel job
                 print("File clicked - display dialog to run or cancel job")
                 job_dialog = lv.msgbox(None, "Job", clicked_btn["name"], ["Run", "Delete"], True)
