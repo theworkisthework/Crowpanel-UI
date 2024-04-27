@@ -53,6 +53,8 @@ class CommandParser():
     def fetch_data(self):
         # Fetch data from the serial port until we read an 'ok'
         # print("Fetch data")
+        # clear previously fetch data
+        self.data = []
         fetch = True
         while fetch:
             while uart1.any():
@@ -77,6 +79,7 @@ class CommandParser():
 
         # print(f"parse_input data: {data}")
         joined_data = "".join([item.decode('utf-8') for item in data])
+        print(f"parse_input joined: {joined_data}")
         json_data = json.loads(joined_data)
         self.gcode_files = json_data
         # print(f"Json data: {json_data["files"]}) 
@@ -104,6 +107,13 @@ def write_command(command):
     print(f"Write Command: {command}")
     uart1.write(command)
 
+def fetch_files(path=None):
+    # $sd/listjson=/sd/gcode
+    if path:
+        write_command(f"$SD/ListJSON={path}\r\n")
+    else:
+        write_command("$SD/ListJSON\r\n")
+
 def run_file(file):
     write_command(f"$SD/Run=/{file}\r\n")
 
@@ -115,11 +125,23 @@ def play():
 
 def pause():
     write_command("!")
-    
+
+def file_browser_callback():
+    fetch_files()
+    list_files()
+
 def list_files():
-    write_command("$SD/ListJSON\r\n")
     command_parser.fetch_data()  # If we know that this command returns json, why not call parse json for this?
     # print(f"List files has: {command_parser.get_file_data()}")
+    
+    # clean the ui file list
+    ui_file_list = lv.list(ui_scr)
+    ui_file_list.set_size(240, 240)
+    
+    if command_parser.gcode_files["path"] is not "":
+        # include a nagivate "up" button
+        list_item_button = ui_file_list.add_btn(lv.SYMBOL.NEW_LINE, "Back")
+        
     for item in command_parser.get_file_data():
 
         def handle_button_click(event):
@@ -139,9 +161,7 @@ def list_files():
                     if button_text == "Run":
                         run_file(clicked_btn["name"])
                     elif button_text == "Delete":
-                        delete_file(clicked_btn["name"])
-            
-            # If this is a directory, get new file list but also display a link back (dir up icon ..)
+                        delete_file(clicked_btn["name"])    
 
             # If this is a file, display a dialog to execute the gcode, maybe delete as well?
             if int(clicked_btn["size"]) > 0:
@@ -150,9 +170,20 @@ def list_files():
                 job_dialog = lv.msgbox(None, "Job", clicked_btn["name"], ["Run", "Delete"], True)
                 job_dialog.align(lv.ALIGN.CENTER,0,0)
                 job_dialog.add_event_cb(handle_dialog_button_click, lv.EVENT.CLICKED, None)
-                
+            
+            # If this is a directory, get new file list but also display a link back (dir up icon ..)
+            elif int(clicked_btn["size"]) == -1:
+                print(f"Directory entry clicked: '{clicked_btn["name"]}' - relist files for selected directory")
+                print(f"command_parser.gcode: {command_parser.gcode_files}")
+                if (command_parser.gcode_files["path"] is not ""):
+                    print(f"We have a path already? {command_parser.gcode_files["path"]}")
+                    fetch_files(f"{command_parser.gcode_files["path"]}/{clicked_btn["name"]}")
+                else:
+                    fetch_files(f"/SD/{clicked_btn["name"]}")
+                list_files()
+
             else:
-                print("Directory entry clicked - relist files for selected directory")
+                print("No idea what this is... we shouldn't be here")
 
         if item["size"] == "-1":
             # print("Directory")
@@ -172,7 +203,7 @@ def list_files():
 #pause_button = CounterBtn(scr,"Pause",50,0, pause)
 
 # List files button, run callback 'list_files' (that issues the file list command, parses the data and puts that into the ui list component)
-list_files_button = Button(ui_scr,"List Files",0,115, list_files)
+list_files_button = Button(ui_scr,"List Files",0,115, file_browser_callback)
 lv.scr_load(ui_scr)
 
 command_parser = CommandParser()
